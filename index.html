@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>二角取り</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,20 +41,29 @@ h1 {
 .stat-value { font-size: clamp(0.85rem, 2.5vw, 1.1rem); font-weight: 700; color: #f0d060; font-variant-numeric: tabular-nums; }
 .divider { width: 1px; height: 24px; background: #ffffff22; }
 
-/* 難易度スライダー */
-.diff-wrap { display: flex; align-items: center; gap: 5px; }
-.diff-wrap label { font-size: 0.52rem; color: #8a7030; letter-spacing: 0.1em; white-space: nowrap; }
-.diff-wrap span { font-size: 0.85rem; font-weight: 700; color: #f0d060; min-width: 18px; text-align: center; }
-#diff-slider {
-  -webkit-appearance: none; appearance: none;
-  width: 80px; height: 4px;
-  background: linear-gradient(90deg, #4a8020, #c8a020);
-  border-radius: 2px; cursor: pointer; outline: none;
+/* ── 難易度ボタン (3択) ── */
+.diff-btn-group { display: flex; gap: 4px; align-items: center; }
+.diff-btn-group label { font-size: 0.52rem; color: #8a7030; letter-spacing: 0.1em; white-space: nowrap; }
+.diff-btn {
+  background: linear-gradient(160deg,#2a1800,#6a4a10,#2a1800);
+  border: 1px solid #c8a02066; border-radius: 5px;
+  color: #c8b070; font-family: 'Noto Serif JP', serif;
+  font-size: clamp(0.52rem, 1.4vw, 0.65rem); font-weight: 700;
+  letter-spacing: 0.04em; padding: 3px 7px; cursor: pointer;
+  transition: filter 0.12s, transform 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  white-space: nowrap;
 }
-#diff-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: #f0d060; border: 2px solid #5a3a00; cursor: pointer;
+.diff-btn.active {
+  background: linear-gradient(160deg,#5a3a00,#c8a020,#5a3a00);
+  border-color: #f0d060; color: #fff8e0;
+  box-shadow: 0 0 8px #c8a02066;
 }
+.diff-btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+
+/* ── ヒント残数 ── */
+#hint-count { font-size: 0.62rem; font-weight: 700; color: #f0a060; min-width: 12px; }
 
 .btn {
   background: linear-gradient(160deg, #5a3a00, #b07808, #5a3a00);
@@ -195,26 +205,29 @@ h1 {
 .music-btn.active { background: linear-gradient(160deg,#5a2a80,#9040e0); border-color: #d090ff; color: #fff; }
 .music-btn:hover { filter: brightness(1.3); transform: translateY(-1px); }
 
-.start-diff-row {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  margin-bottom: 6px;
+/* スタート画面 難易度ボタン */
+.start-diff-btns {
+  display: flex; gap: 8px; justify-content: center; margin-bottom: 22px;
 }
-.start-diff-row label { font-size: 0.72rem; color: #c8a060; letter-spacing: 0.12em; }
-.start-diff-row span { font-size: 1.1rem; font-weight: 900; color: #f0d060; min-width: 26px; }
-#start-diff-slider {
-  -webkit-appearance: none; appearance: none;
-  width: 130px; height: 6px;
-  background: linear-gradient(90deg, #2a6020, #d0b030);
-  border-radius: 3px; cursor: pointer; outline: none;
+.start-diff-btn {
+  background: linear-gradient(160deg,#2a1800,#6a4a10,#2a1800);
+  border: 1px solid #c8a02066; border-radius: 8px;
+  color: #c8b070; font-family: 'Noto Serif JP', serif;
+  font-size: 0.78rem; font-weight: 700;
+  letter-spacing: 0.05em; padding: 8px 14px; cursor: pointer;
+  transition: filter 0.12s, transform 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  line-height: 1.5;
 }
-#start-diff-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 18px; height: 18px;
-  border-radius: 50%; background: #f0d060; border: 2px solid #5a3a00; cursor: pointer;
+.start-diff-btn.active {
+  background: linear-gradient(160deg,#5a3a00,#c8a020,#5a3a00);
+  border-color: #f0d060; color: #fff8e0;
+  box-shadow: 0 0 12px #c8a02077;
 }
-.diff-labels {
-  display: flex; justify-content: space-between;
-  font-size: 0.56rem; color: #887040; margin-bottom: 22px; padding: 0 2px;
-}
+.start-diff-btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+.start-diff-btn span { display: block; font-size: 0.52rem; font-weight: 400; color: inherit; opacity: 0.8; margin-top: 2px; }
+
 .btn-start {
   background: linear-gradient(160deg, #7a4a00, #e09010, #7a4a00);
   border: 2px solid #f0c030; border-radius: 10px;
@@ -238,7 +251,7 @@ h1 {
   background: rgba(0,0,0,0.55);
   border: 1px solid #c8a02033;
   border-radius: 8px; padding: 6px 10px;
-  min-width: 110px; font-size: 0.68rem;
+  min-width: 120px; font-size: 0.68rem;
   flex-shrink: 0;
 }
 /* スマホではサイドランクを非表示（縦幅が足りない） */
@@ -246,17 +259,26 @@ h1 {
   #side-rank { display: none; }
 }
 #side-rank .rank-hd {
-  color: #a09050; letter-spacing: 0.15em; font-size: 0.6rem;
+  color: #a09050; letter-spacing: 0.12em; font-size: 0.58rem;
   border-bottom: 1px solid #c8a02033; padding-bottom: 3px; margin-bottom: 4px;
   text-align: center;
 }
 #side-rank li {
-  display: flex; justify-content: space-between; gap: 6px;
+  display: flex; justify-content: space-between; gap: 4px;
   color: #c8b070; padding: 1px 2px; font-variant-numeric: tabular-nums;
-  font-size: 0.65rem;
+  font-size: 0.63rem;
 }
 #side-rank li.sr-cur { color: #f0d060; font-weight: 700; }
-#side-rank li .sr-diff { font-size: 0.58rem; color: #887040; }
+
+/* サイドランク 難易度タブ */
+.sr-tab-row { display: flex; gap: 3px; justify-content: center; margin-bottom: 5px; }
+.sr-tab {
+  font-size: 0.54rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;
+  background: #1a2e18; border: 1px solid #c8a02033; color: #a09050;
+  font-family: 'Noto Serif JP', serif;
+  -webkit-tap-highlight-color: transparent;
+}
+.sr-tab.active { background: #2a4a20; border-color: #c8a020; color: #f0d060; }
 
 /* ══ Win / Deadlock overlay ══ */
 #win-overlay, #deadlock-overlay {
@@ -285,6 +307,22 @@ h1 {
 #ranking-list li .rank-diff  { font-size:0.6rem; color:#887040; }
 .win-btns { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
+/* ── ニックネーム入力 (Win画面) ── */
+.nick-row { display:flex; gap:6px; justify-content:center; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+.nick-input {
+  background: #0d200d; border: 1px solid #c8a02088; border-radius: 5px;
+  color: #f0d060; font-family: 'Noto Serif JP', serif;
+  font-size: 0.82rem; padding: 5px 8px; width: 140px;
+  outline: none;
+}
+.nick-input:focus { border-color: #f0d060; }
+.nick-status { font-size: 0.65rem; color: #88cc66; letter-spacing: 0.1em; min-height: 1.2em; margin-bottom: 10px; }
+
+/* ── グローバルランキング ── */
+#global-ranking-list { list-style:none; margin-bottom:14px; }
+#global-ranking-list li { display:flex; justify-content:space-between; align-items:center; padding:2px 6px; font-size:0.76rem; color:#d0c090; border-radius:4px; gap:6px; }
+#global-ranking-list li .rank-medal { width:18px; text-align:left; }
+
 /* ══ 手詰まりアニメ ══ */
 @keyframes deadlock-shake {
   0%,100%{ transform:translateX(0); }
@@ -303,7 +341,6 @@ h1 {
 #fx-canvas.active { display: block; }
 
 /* ══ 横向きレイアウト ══ */
-/* ══ スマホ横向き：UIを最小化してボードに最大スペース ══ */
 @media (orientation: landscape) and (max-height: 500px) {
   body { flex-direction: column; align-items: center; padding: 2px 4px; gap: 0; }
   header { margin-bottom: 1px; }
@@ -313,8 +350,9 @@ h1 {
   .stat-label { font-size: 0.38rem; }
   .stat-value { font-size: 0.72rem; }
   .divider { height: 16px; }
-  .diff-wrap label, .music-sel-wrap label { font-size: 0.38rem; }
-  #diff-slider { width: 55px; }
+  .diff-btn-group label { font-size: 0.38rem; }
+  .diff-btn { font-size: 0.48rem; padding: 2px 4px; }
+  .music-sel-wrap label { font-size: 0.38rem; }
   .music-mini-btn { font-size: 0.48rem; padding: 2px 4px; }
   .btn { font-size: 0.52rem; padding: 3px 6px; }
   #message { font-size: 0.6rem; margin-top: 1px; min-height: 0.8em; }
@@ -354,13 +392,18 @@ h1 {
       <button class="music-btn" id="ms1" onclick="selectMusic(1)">🎵 月夜の竹林</button>
       <button class="music-btn" id="ms2" onclick="selectMusic(2)">🎵 龍の舞</button>
     </div>
-    <div class="start-diff-row">
-      <label>難易度</label>
-      <input type="range" id="start-diff-slider" min="1" max="10" value="5"
-             oninput="document.getElementById('start-diff-val').textContent=this.value">
-      <span id="start-diff-val">5</span>
+    <div style="margin-bottom:8px;font-size:0.65rem;color:#a09050;letter-spacing:0.15em">難　易　度</div>
+    <div class="start-diff-btns">
+      <button class="start-diff-btn active" id="sd-easy" onclick="setDiffStart('easy')">
+        初　級<span>12×6・ヒント5回</span>
+      </button>
+      <button class="start-diff-btn" id="sd-normal" onclick="setDiffStart('normal')">
+        中　級<span>16×8・ヒント3回</span>
+      </button>
+      <button class="start-diff-btn" id="sd-hard" onclick="setDiffStart('hard')">
+        上　級<span>18×8・ヒントなし</span>
+      </button>
     </div>
-    <div class="diff-labels"><span>やさしい</span><span>ふつう</span><span>むずかしい</span></div>
     <button class="btn-start" onclick="startGame()">ゲームスタート</button>
   </div>
 </div>
@@ -374,11 +417,11 @@ h1 {
   <div class="divider"></div>
   <div class="stat"><div class="stat-label">スコア</div><div class="stat-value" id="score">0</div></div>
   <div class="divider"></div>
-  <div class="diff-wrap">
+  <div class="diff-btn-group">
     <label>難易度</label>
-    <input type="range" id="diff-slider" min="1" max="10" value="5"
-           oninput="difficulty=+this.value;document.getElementById('diff-val').textContent=this.value">
-    <span id="diff-val">5</span>
+    <button class="diff-btn active" id="db-easy"   onclick="setDiff('easy')">初級</button>
+    <button class="diff-btn"        id="db-normal" onclick="setDiff('normal')">中級</button>
+    <button class="diff-btn"        id="db-hard"   onclick="setDiff('hard')">上級</button>
   </div>
   <div class="divider"></div>
   <div class="music-sel-wrap">
@@ -388,7 +431,7 @@ h1 {
     <button class="music-mini-btn" id="mm2" onclick="selectMusicInGame(2)">龍</button>
   </div>
   <div class="divider"></div>
-  <button class="btn hint-btn" id="hint-btn" onclick="doHint()">ヒント</button>
+  <button class="btn hint-btn" id="hint-btn" onclick="doHint()">ヒント <span id="hint-count"></span></button>
   <button class="btn" onclick="newGame()">新規</button>
   <button class="btn bgm-btn" id="bgm-btn" onclick="toggleBGM()">♪ ON</button>
 </div>
@@ -402,7 +445,12 @@ h1 {
   </div>
   <!-- サイドランク -->
   <div id="side-rank">
-    <div class="rank-hd">🏆 ベスト記録</div>
+    <div class="rank-hd" id="side-rank-hd">🏆 グローバル TOP 5</div>
+    <div class="sr-tab-row">
+      <button class="sr-tab active" onclick="loadSideRank('easy')">初級</button>
+      <button class="sr-tab"        onclick="loadSideRank('normal')">中級</button>
+      <button class="sr-tab"        onclick="loadSideRank('hard')">上級</button>
+    </div>
     <ul id="side-rank-list"></ul>
   </div>
 </div>
@@ -415,8 +463,25 @@ h1 {
     <div class="win-title">あがり！</div>
     <div class="win-praise" id="win-praise"></div>
     <div class="win-stats" id="win-stats"></div>
-    <div class="ranking-title">🏆 ベストタイム TOP 5</div>
+
+    <!-- ニックネーム入力＆送信 -->
+    <div id="nick-section">
+      <div class="nick-row">
+        <input class="nick-input" id="nick-input" type="text"
+               maxlength="20" placeholder="ニックネーム" autocomplete="off">
+        <button class="btn" id="nick-save-btn" onclick="saveScore()">登録</button>
+      </div>
+      <div class="nick-status" id="nick-status"></div>
+    </div>
+
+    <!-- グローバルランキング -->
+    <div class="ranking-title">🌐 グローバル TOP 5</div>
+    <ul id="global-ranking-list"></ul>
+
+    <!-- ローカルランキング -->
+    <div class="ranking-title">🏆 ローカル TOP 5</div>
     <ul id="ranking-list"></ul>
+
     <div class="win-btns">
       <button class="btn" onclick="newGame(); closeWin()">もう一度</button>
       <button class="btn hint-btn" onclick="closeWin()">閉じる</button>
@@ -431,6 +496,7 @@ h1 {
     <div class="win-praise" style="color:#cc9966">残念！これ以上消せる牌がありません。<br>気を取り直してもう一度！</div>
     <div class="win-stats" id="deadlock-stats" style="margin-top:8px"></div>
     <div class="win-btns" style="margin-top:16px">
+      <button class="btn" id="redeal-btn" onclick="redeal()" style="display:none">再配布</button>
       <button class="btn" onclick="newGame(); document.getElementById('deadlock-overlay').classList.remove('show')">新規ゲーム</button>
     </div>
   </div>
@@ -438,33 +504,118 @@ h1 {
 
 <script>
 // ═══════════════════════════════════════════
-// CONFIG — 18列×8行=144マス、空きなし
-// 72種×2枚=144枚
-// 萬子9+筒子9+索子9+風牌4+三元牌3=34種 ×2セット=68種
-// +萬子4種追加=72種 ✓
+// SUPABASE
 // ═══════════════════════════════════════════
-const COLS = 18, ROWS = 8;
+const SB_URL = 'https://ncvupxhkrgpuicbxzjmi.supabase.co';
+const SB_KEY = 'sb_publishable_3mdCtbVKhiUzH_iTULKQaQ_crMj_-7X';
+let sbClient = null, sbOnline = false;
+try {
+  sbClient = supabase.createClient(SB_URL, SB_KEY);
+  sbOnline = true;
+} catch(e) {
+  console.warn('Supabase init failed:', e);
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
+}
+
+async function fetchGlobalRank(diff) {
+  if(!sbOnline || !sbClient) return null;
+  try {
+    const { data, error } = await withTimeout(
+      sbClient.from('shisen_rankings')
+        .select('player_name, time_seconds, score')
+        .eq('difficulty', diff)
+        .order('time_seconds', { ascending: true })
+        .limit(5),
+      5000
+    );
+    if(error) throw error;
+    return data;
+  } catch(e) {
+    console.warn('fetchGlobalRank error:', e);
+    return null;
+  }
+}
+
+async function insertScore(playerName, timeSec, diff, scoreVal) {
+  if(!sbOnline || !sbClient) return null;
+  try {
+    const { data, error } = await withTimeout(
+      sbClient.from('shisen_rankings')
+        .insert([{ player_name: playerName, time_seconds: timeSec, difficulty: diff, score: scoreVal }])
+        .select(),
+      8000
+    );
+    if(error) throw error;
+    return data;
+  } catch(e) {
+    console.warn('insertScore error:', e);
+    return null;
+  }
+}
+
+async function getGlobalPosition(timeSec, diff) {
+  if(!sbOnline || !sbClient) return null;
+  try {
+    const { count, error } = await withTimeout(
+      sbClient.from('shisen_rankings')
+        .select('*', { count: 'exact', head: true })
+        .eq('difficulty', diff)
+        .lt('time_seconds', timeSec),
+      5000
+    );
+    if(error) throw error;
+    return (count || 0) + 1;
+  } catch(e) {
+    return null;
+  }
+}
+
+function _esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════
+// DIFFICULTY CONFIG
+// ═══════════════════════════════════════════
+const DIFF_CONFIG = {
+  easy:   { cols:12, rows:6, tileTypes:36, hints:5, redeal:true,  label:'初級', maxTry:40 },
+  normal: { cols:16, rows:8, tileTypes:64, hints:3, redeal:false, label:'中級', maxTry:20 },
+  hard:   { cols:18, rows:8, tileTypes:72, hints:0, redeal:false, label:'上級', maxTry:10 },
+};
+
+let difficulty = 'easy';
+let COLS = 12, ROWS = 6;
+let ACTIVE_TILES = null;
+let hintsLeft = 5;
+
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
 const GAP = 0;
 const BOARD_PAD = 8;
 
 // viewport に合わせてタイルサイズを動的計算
 let TW=44, TH=58;
 function calcTileSize(){
-  // ボード以外のUI要素の実際の高さを計測
   const header  = document.querySelector('header');
   const uiBar   = document.querySelector('.ui-bar');
   const msgEl   = document.getElementById('message');
   const uiH = (header  ? header.offsetHeight  : 0)
             + (uiBar   ? uiBar.offsetHeight    : 0)
             + (msgEl   ? msgEl.offsetHeight    : 0)
-            + 20; // 余白合計
+            + 20;
 
-  // 使えるスペース（body padding 4px×2 + ボード枠 (BOARD_PAD+4)×2 を引く）
-  const boardFrame = (BOARD_PAD + 4) * 2; // padding + border
+  const boardFrame = (BOARD_PAD + 4) * 2;
   const availW = window.innerWidth  - 8 - boardFrame;
   const availH = window.innerHeight - uiH - boardFrame;
 
-  // タイル比率 44:58
   const RATIO = 58 / 44;
   let tw = Math.floor(availW / COLS);
   let th = Math.round(tw * RATIO);
@@ -472,7 +623,6 @@ function calcTileSize(){
     th = Math.floor(availH / ROWS);
     tw = Math.round(th / RATIO);
   }
-  // 上限44px、下限は制限しない（全マス表示を最優先）
   TW = Math.min(44, Math.max(10, tw));
   TH = Math.min(58, Math.max(13, th));
 }
@@ -546,10 +696,8 @@ function makeTile(def,w,h){
   svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   svg.classList.add('tf');
 
-  // 外枠（区切り線）
   svgRect(svg,0,0,w,h,0,'#8a8070');
 
-  // 牌面（象牙色グラデ）
   const gid='g'+(Math.random()*1e9|0);
   const defs=ns('defs');
   const lg=ns('linearGradient');
@@ -567,7 +715,6 @@ function makeTile(def,w,h){
   face.setAttribute('rx',2); face.setAttribute('fill',`url(#${gid})`);
   svg.appendChild(face);
 
-  // 内側細枠
   const ib=ns('rect');
   ib.setAttribute('x',2.5); ib.setAttribute('y',2.5);
   ib.setAttribute('width',w-5); ib.setAttribute('height',h-5);
@@ -594,27 +741,22 @@ function drawContent(svg,def,w,h){
   else if(cat==='honor'){
     const col=n===1?'#cc0000':n===2?'#116611':'transparent';
     if(n!==3) svgText(svg,HONOR_CH[n-1],cx,h*0.67,Math.min(w,h)*0.42,col,'900');
-    // n===3(白)は無印
   }
 }
 
 // ═══════════════════════════════════════════
-// 萬子 — 上:黒い漢数字  下:大きな赤い「萬」
+// 萬子
 // ═══════════════════════════════════════════
 function drawMan(svg,n,w,h){
   const cx=w/2;
-  // 上：黒い数字（一〜九）縦に大きく
   svgText(svg,MAN_NUM[n-1],cx,h*0.47,Math.min(w*0.72,h*0.38),'#111111','900');
-  // 下：赤い「萬」大きく
   svgText(svg,'萬',cx,h*0.88,Math.min(w*0.68,h*0.36),'#cc0000','900');
 }
 
 // ═══════════════════════════════════════════
-// 筒子 — 同心円リング（外:色 中:白 内:色）
-// 参考画像: 紺/赤の2色、1索は大きな装飾円
+// 筒子
 // ═══════════════════════════════════════════
 function drawPin(svg,n,w,h){
-  // 配置レイアウト [xRatio, yRatio]
   const L={
     1:[[.5,.5]],
     2:[[.5,.27],[.5,.73]],
@@ -626,7 +768,6 @@ function drawPin(svg,n,w,h){
     8:[[.23,.14],[.5,.14],[.77,.14],[.23,.5],[.77,.5],[.23,.86],[.5,.86],[.77,.86]],
     9:[[.23,.12],[.5,.12],[.77,.12],[.23,.5],[.5,.5],[.77,.5],[.23,.88],[.5,.88],[.77,.88]],
   };
-  // 色: 紺=NAVY, 赤=RED、参考画像の色分け
   const NAVY='#1a2e6e', RED='#cc1818';
   const C={
     1:[NAVY],
@@ -641,7 +782,6 @@ function drawPin(svg,n,w,h){
   };
   const pts=L[n]||[[.5,.5]];
   const cols=C[n]||[NAVY];
-  // 円サイズ: n数で調整
   const maxR = n===1 ? Math.min(w,h)*0.38
               : n<=2 ? Math.min(w,h)*0.21
               : n<=4 ? Math.min(w,h)*0.18
@@ -649,14 +789,10 @@ function drawPin(svg,n,w,h){
               : Math.min(w,h)*0.14;
 
   if(n===1){
-    // 1筒: 大きな装飾的な円（菊柄風）
     const cx=w/2, cy=h/2;
     const R=maxR;
-    // 最外枠
     svgCircle(svg,cx,cy,R,NAVY);
-    // 外白リング
     svgCircle(svg,cx,cy,R*0.85,'#f8f0dc');
-    // 花弁（8枚）
     for(let i=0;i<8;i++){
       const ang=i*Math.PI/4;
       const pr=R*0.62;
@@ -664,11 +800,8 @@ function drawPin(svg,n,w,h){
       svgCircle(svg,px,py,R*0.2,RED);
       svgCircle(svg,px,py,R*0.1,'#f8f0dc');
     }
-    // 中心大円
     svgCircle(svg,cx,cy,R*0.35,RED);
-    // 中心白
     svgCircle(svg,cx,cy,R*0.18,'#f8f0dc');
-    // 中心小点
     svgCircle(svg,cx,cy,R*0.08,NAVY);
     return;
   }
@@ -676,27 +809,21 @@ function drawPin(svg,n,w,h){
   pts.forEach(([px,py],i)=>{
     const cx=w*px, cy=h*py, col=cols[i]||NAVY;
     const R=maxR;
-    // 外円（色）
     svgCircle(svg,cx,cy,R,col,'#0004',0.3);
-    // 中白リング
     svgCircle(svg,cx,cy,R*0.72,'#f8f0dc');
-    // 内花弁（6枚）
     for(let j=0;j<6;j++){
       const ang=j*Math.PI/3;
       const pr=R*0.45;
       const bx=cx+Math.cos(ang)*pr, by=cy+Math.sin(ang)*pr;
       svgCircle(svg,bx,by,R*0.17,col);
     }
-    // 内中心円（色）
     svgCircle(svg,cx,cy,R*0.26,col);
-    // 中心白点
     svgCircle(svg,cx,cy,R*0.12,'rgba(255,255,255,0.8)');
   });
 }
 
 // ═══════════════════════════════════════════
-// 索子 — H型（ダンベル型）緑マーク
-// 5索の中央1個だけ赤
+// 索子
 // ═══════════════════════════════════════════
 function drawSou(svg,n,w,h){
   if(n===1){ drawSou1(svg,w,h); return; }
@@ -710,19 +837,16 @@ function drawSou(svg,n,w,h){
     4:[[.3,.25,false,'h'],[.7,.25,false,'h'],[.3,.75,false,'h'],[.7,.75,false,'h']],
     5:[[.3,.17,false,'h'],[.7,.17,false,'h'],[.5,.5,true,'h'],[.3,.83,false,'h'],[.7,.83,false,'h']],
     6:[[.3,.14,false,'h'],[.7,.14,false,'h'],[.3,.5,false,'h'],[.7,.5,false,'h'],[.3,.86,false,'h'],[.7,.86,false,'h']],
-    // 7索: 上に赤H×1(中央)、下2行×2列に緑H×4
     7:[
       [.5,.13,true,'h'],
       [.28,.45,false,'h'],[.72,.45,false,'h'],
       [.28,.72,false,'h'],[.72,.72,false,'h'],
       [.28,.92,false,'h'],[.72,.92,false,'h'],
     ],
-    // 8索: 上の蝶W型(∧∧)×1 + 下の蝶M型(∨∨)×1
     8:[
       [.5,.28,false,'m_up'],
       [.5,.72,false,'m_dn'],
     ],
-    // 9索: 3列×3行、中央列が赤
     9:[
       [.2,.14,false,'h'],[.5,.14,true,'h'],[.8,.14,false,'h'],
       [.2,.5,false,'h'], [.5,.5,true,'h'], [.8,.5,false,'h'],
@@ -733,7 +857,7 @@ function drawSou(svg,n,w,h){
   const pts=layouts[n]||[[.5,.5,false,'h']];
   const bw = n<=3 ? w*0.28 : n<=6 ? w*0.21 : w*0.17;
   const bh = n<=3 ? h*0.44 : n<=6 ? h*0.36 : h*0.30;
-  const sw = bh*0.20;  // 横棒の高さ
+  const sw = bh*0.20;
 
   pts.forEach(([px,py,isRed,type])=>{
     const cx=w*px, cy=h*py;
@@ -748,22 +872,19 @@ function drawSou(svg,n,w,h){
   });
 }
 
-// Π型ダンベル — 上横棒＋左右縦棒＋節＋下横棒＋左右縦棒
-// 白縁で分離感を確保
 function drawHShape(svg,cx,cy,bw,bh,sw,col){
-  const barH = sw;           // 横棒の高さ
-  const legW = sw*0.72;      // 縦棒の幅
-  const nodeR = legW*1.0;    // 節の半径
+  const barH = sw;
+  const legW = sw*0.72;
+  const nodeR = legW*1.0;
   const R = barH*0.5;
   const Rl = legW*0.5;
 
-  const xL = cx - bw/2 + legW*0.5;  // 左縦棒中心X
-  const xR = cx + bw/2 - legW*0.5;  // 右縦棒中心X
-  const yT = cy - bh/2;              // 上端
-  const yB = cy + bh/2;              // 下端
-  const legLen = bh/2 - barH;        // 縦棒の長さ（横棒〜中央）
+  const xL = cx - bw/2 + legW*0.5;
+  const xR = cx + bw/2 - legW*0.5;
+  const yT = cy - bh/2;
+  const yB = cy + bh/2;
+  const legLen = bh/2 - barH;
 
-  // 白縁（全パーツの下に）
   const W='rgba(255,255,255,0.75)';
   svgRect(svg,cx-bw/2-1, yT-1,        bw+2, barH+2, R+1, W);
   svgRect(svg,cx-bw/2-1, yB-barH-1,   bw+2, barH+2, R+1, W);
@@ -772,27 +893,19 @@ function drawHShape(svg,cx,cy,bw,bh,sw,col){
   svgRect(svg,xL-legW/2-1, cy-1,       legW+2, legLen+2, Rl+1, W);
   svgRect(svg,xR-legW/2-1, cy-1,       legW+2, legLen+2, Rl+1, W);
 
-  // 上横棒
   svgRect(svg,cx-bw/2, yT,          bw,    barH,   R,  col);
-  // 下横棒
   svgRect(svg,cx-bw/2, yB-barH,     bw,    barH,   R,  col);
-  // 左縦棒 上半（横棒直下〜中央）
   svgRect(svg,xL-legW/2, yT+barH,   legW,  legLen, Rl, col);
-  // 右縦棒 上半
   svgRect(svg,xR-legW/2, yT+barH,   legW,  legLen, Rl, col);
-  // 左縦棒 下半（中央〜横棒直上）
   svgRect(svg,xL-legW/2, cy,        legW,  legLen, Rl, col);
-  // 右縦棒 下半
   svgRect(svg,xR-legW/2, cy,        legW,  legLen, Rl, col);
 
-  // 節（中央左右）— 楕円形の出っ張り
   const ne=(x,y)=>{
     const e=ns('ellipse');
     e.setAttribute('cx',x); e.setAttribute('cy',y);
     e.setAttribute('rx',nodeR*1.5); e.setAttribute('ry',nodeR*0.7);
     e.setAttribute('fill',col);
     svg.appendChild(e);
-    // 白ハイライト
     const eh=ns('ellipse');
     eh.setAttribute('cx',x-nodeR*0.3); eh.setAttribute('cy',y-nodeR*0.2);
     eh.setAttribute('rx',nodeR*0.5); eh.setAttribute('ry',nodeR*0.25);
@@ -803,31 +916,21 @@ function drawHShape(svg,cx,cy,bw,bh,sw,col){
   ne(xR, cy);
 }
 
-// 蝶型（W/M字）— inverted=true: W∧∧型(上蝶), false: M∨∨型(下蝶)
-// 構成: 左H型＋右H型の横棒共有＋中央で斜め棒が交差
 function drawButterflyShape(svg,cx,cy,bw,bh,sw,col,inverted){
   const R=sw*0.45;
-  // 左ブロック（H型）
   const lx=cx-bw*0.28;
-  // 右ブロック（H型）
   const rx=cx+bw*0.28;
   const halfW=bw*0.28;
   const yT=cy-bh/2, yB=cy+bh/2;
 
-  // 左H: 上横棒
   svgRect(svg,lx-halfW,yT,         halfW*2,sw,R,col);
-  // 左H: 下横棒
   svgRect(svg,lx-halfW,yB-sw,      halfW*2,sw,R,col);
-  // 右H: 上横棒
   svgRect(svg,rx-halfW,yT,         halfW*2,sw,R,col);
-  // 右H: 下横棒
   svgRect(svg,rx-halfW,yB-sw,      halfW*2,sw,R,col);
 
-  // 斜め棒4本（内側で交差してV字やΛ字を形成）
   const xL1=lx-halfW*0.4, xL2=lx+halfW*0.4;
   const xR1=rx-halfW*0.4, xR2=rx+halfW*0.4;
   const yt=yT+sw, yb=yB-sw;
-  const yMid=cy;
 
   const ln=(x1,y1,x2,y2)=>{
     const l=ns('line');
@@ -839,16 +942,13 @@ function drawButterflyShape(svg,cx,cy,bw,bh,sw,col,inverted){
   };
 
   if(inverted){
-    // W∧∧型: 下端から中央頂点へ (Λ×2)
-    ln(xL1,yb, lx, yt+sw*0.5);   // 左H 左斜め
-    ln(xL2,yb, lx, yt+sw*0.5);   // 左H 右斜め
-    ln(xR1,yb, rx, yt+sw*0.5);   // 右H 左斜め
-    ln(xR2,yb, rx, yt+sw*0.5);   // 右H 右斜め
-    // 左右H間の中央交差棒
+    ln(xL1,yb, lx, yt+sw*0.5);
+    ln(xL2,yb, lx, yt+sw*0.5);
+    ln(xR1,yb, rx, yt+sw*0.5);
+    ln(xR2,yb, rx, yt+sw*0.5);
     ln(lx+halfW*0.2, yb, rx-halfW*0.2, yt+sw*0.5);
     ln(rx-halfW*0.2, yb, lx+halfW*0.2, yt+sw*0.5);
   } else {
-    // M∨∨型: 上端から中央底点へ (V×2)
     ln(xL1,yt, lx, yb-sw*0.5);
     ln(xL2,yt, lx, yb-sw*0.5);
     ln(xR1,yt, rx, yb-sw*0.5);
@@ -858,10 +958,8 @@ function drawButterflyShape(svg,cx,cy,bw,bh,sw,col,inverted){
   }
 }
 
-// 1索：鳥＋緑の玉（参考画像に忠実）
 function drawSou1(svg,w,h){
   const GREEN='#1a7a1a';
-  // 緑の玉を複数（松の葉っぽく）左上に
   const balls=[
     [.22,.18],[.38,.12],[.52,.18],[.34,.27],[.48,.27],
     [.22,.34],[.36,.38],[.5,.34],
@@ -872,23 +970,17 @@ function drawSou1(svg,w,h){
     svgCircle(svg,w*px-w*0.02,h*py-h*0.01,w*0.025,'rgba(255,255,255,0.35)');
   });
 
-  // 鳥（右下）
   const bx=w*0.62, by=h*0.72;
-  // 体
   const body=ns('ellipse');
   body.setAttribute('cx',bx); body.setAttribute('cy',by);
   body.setAttribute('rx',w*0.2); body.setAttribute('ry',h*0.13);
   body.setAttribute('fill',GREEN); body.setAttribute('stroke','#0a4a0a'); body.setAttribute('stroke-width','0.5');
   svg.appendChild(body);
-  // 頭
   svgCircle(svg,bx+w*0.16,by-h*0.1,w*0.1,GREEN,'#0a4a0a',0.5);
-  // くちばし
   const beak=ns('polygon');
   beak.setAttribute('points',`${bx+w*0.26},${by-h*0.09} ${bx+w*0.38},${by-h*0.07} ${bx+w*0.26},${by-h*0.04}`);
   beak.setAttribute('fill','#cc8800'); svg.appendChild(beak);
-  // 目
   svgCircle(svg,bx+w*0.2,by-h*0.115,1.8,'#111');
-  // 脚
   [[bx-w*0.05,by+h*0.13],[bx+w*0.05,by+h*0.13]].forEach(([lx,ly])=>{
     const leg=ns('line');
     leg.setAttribute('x1',lx); leg.setAttribute('y1',by+h*0.09);
@@ -899,8 +991,7 @@ function drawSou1(svg,w,h){
 }
 
 // ═══════════════════════════════════════════
-// ═══════════════════════════════════════════
-// AUDIO ENGINE — 3種の中華風BGM
+// AUDIO ENGINE
 // ═══════════════════════════════════════════
 let audioCtx=null, bgmNodes=[], bgmOn=true, bgmLoopTimer=null, currentMusic=0;
 
@@ -910,20 +1001,16 @@ function getCtx(){
   return audioCtx;
 }
 
-// 宮=C(523) 商=D(587) 角=E(659) 徴=G(784) 羽=A(880)  0=休符
 const BGM_TRACKS=[
-  // 0: 春の宴 — 明るく軽快
   [[523,.18],[659,.12],[784,.18],[880,.14],[784,.12],[659,.22],[523,.18],
    [587,.14],[659,.18],[784,.14],[880,.20],[784,.14],[659,.14],[523,.28],
    [440,.16],[523,.12],[659,.18],[784,.12],[659,.10],[523,.16],[440,.24],[392,.30],
    [523,.12],[587,.10],[659,.16],[784,.12],[880,.16],[1047,.20],[880,.14],[784,.14],[659,.28]],
-  // 1: 月夜の竹林 — ゆったり幻想的
   [[523,.35],[0,.1],[659,.28],[0,.08],[784,.40],[0,.12],
    [880,.28],[784,.18],[659,.32],[0,.1],[523,.45],[0,.15],
    [440,.30],[0,.08],[523,.25],[587,.18],[659,.38],[0,.12],
    [784,.28],[659,.18],[587,.20],[523,.50],[0,.2],
    [392,.28],[440,.18],[523,.30],[0,.1],[659,.35],[784,.28],[659,.18],[523,.50]],
-  // 2: 龍の舞 — 力強くダイナミック
   [[523,.10],[523,.08],[659,.12],[784,.10],[880,.14],[784,.10],[659,.08],[523,.18],
    [392,.10],[440,.10],[523,.12],[659,.10],[784,.12],[880,.10],[1047,.16],[880,.10],[784,.10],
    [659,.10],[784,.10],[880,.12],[784,.10],[659,.10],[587,.08],[523,.16],
@@ -980,7 +1067,6 @@ function selectMusic(i){
 }
 function selectMusicInGame(i){ selectMusic(i); }
 
-// ── 効果音 ──
 function playSE(type){
   const ctx=getCtx(), now=ctx.currentTime;
   const tone=(freq,dur,vol,wave)=>{
@@ -992,7 +1078,7 @@ function playSE(type){
     o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now+dur+0.01);
   };
   if(type==='match'){
-    tone(659,.18,0.12); 
+    tone(659,.18,0.12);
     setTimeout(()=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type='sine'; o.frequency.value=1047; g.gain.setValueAtTime(0.09,ctx.currentTime); g.gain.linearRampToValueAtTime(0,ctx.currentTime+0.15); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.16); },80);
   } else if(type==='win'){
     [523,659,784,880,1047,1319].forEach((f,i)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type='sine'; o.frequency.value=f; const t=ctx.currentTime+i*0.09; g.gain.setValueAtTime(0.13,t); g.gain.linearRampToValueAtTime(0,t+0.28); o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.3); });
@@ -1003,7 +1089,6 @@ function playSE(type){
   }
 }
 
-// ── 手詰まり音声（Web Speech API） ──
 function speakDeadlock(){
   if(!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
@@ -1060,19 +1145,55 @@ function _fxLoop(){
 // ═══════════════════════════════════════════
 // ランク表示
 // ═══════════════════════════════════════════
-let bestTimes=JSON.parse(localStorage.getItem('shisen_best5')||'[]');
+let bestTimes = JSON.parse(localStorage.getItem('shisen_best5') || '[]');
+let _sideRankDiff = 'easy';
 
-function updateSideRank(){
-  const ul=document.getElementById('side-rank-list');
+function loadSideRank(diff) {
+  _sideRankDiff = diff;
+  // タブの active 更新
+  document.querySelectorAll('.sr-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', ['easy','normal','hard'][i] === diff);
+  });
+  const hdEl = document.getElementById('side-rank-hd');
+  if(hdEl) hdEl.textContent = '🏆 ' + DIFF_CONFIG[diff].label + ' TOP 5';
+
+  const ul = document.getElementById('side-rank-list');
   if(!ul) return;
-  ul.innerHTML='';
-  const medals=['🥇','🥈','🥉','4','5'];
-  if(bestTimes.length===0){
-    const li=document.createElement('li'); li.style.color='#887040'; li.textContent='記録なし'; ul.appendChild(li); return;
+  ul.innerHTML = '<li style="color:#887040;font-size:0.6rem">読み込み中…</li>';
+
+  if(!sbOnline) {
+    _renderSideRankLocal(ul, diff);
+    return;
   }
-  bestTimes.slice(0,5).forEach((rec,i)=>{
-    const li=document.createElement('li');
-    li.innerHTML=`<span>${medals[i]||''}</span><span class="sr-diff">Lv${rec.diff}</span><span>${fmtTime(rec.time)}</span>`;
+  fetchGlobalRank(diff).then(rows => {
+    ul.innerHTML = '';
+    if(!rows || rows.length === 0) {
+      const li = document.createElement('li');
+      li.style.color = '#887040'; li.textContent = '記録なし';
+      ul.appendChild(li); return;
+    }
+    const medals = ['🥇','🥈','🥉','4','5'];
+    rows.forEach((rec, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${medals[i]||''}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(rec.player_name)}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time_seconds)}</span>`;
+      ul.appendChild(li);
+    });
+  });
+}
+
+function _renderSideRankLocal(ul, diff) {
+  ul.innerHTML = '';
+  const filtered = bestTimes
+    .filter(r => (r.difficulty || r.diff || 'easy') === diff)
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 5);
+  if(filtered.length === 0) {
+    const li = document.createElement('li'); li.style.color = '#887040'; li.textContent = '記録なし'; ul.appendChild(li); return;
+  }
+  const medals = ['🥇','🥈','🥉','4','5'];
+  filtered.forEach((rec, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${medals[i]||''}</span><span style="flex:1">あなた</span><span>${fmtTime(rec.time)}</span>`;
     ul.appendChild(li);
   });
 }
@@ -1082,15 +1203,40 @@ function updateSideRank(){
 // ═══════════════════════════════════════════
 let grid=[], selected=null, score=0, hintPair=null;
 let startTime, timerInterval, gameFinished=false;
-let difficulty=5;
+
+function setDiff(d) {
+  difficulty = d;
+  ['easy','normal','hard'].forEach(k => {
+    const db = document.getElementById('db-'+k);
+    if(db) db.classList.toggle('active', k === d);
+    const sd = document.getElementById('sd-'+k);
+    if(sd) sd.classList.toggle('active', k === d);
+  });
+}
+
+function setDiffStart(d) {
+  setDiff(d);
+}
 
 function startGame(){
-  difficulty=+document.getElementById('start-diff-slider').value;
-  document.getElementById('diff-slider').value=difficulty;
-  document.getElementById('diff-val').textContent=difficulty;
   document.getElementById('start-overlay').classList.add('hidden');
   getCtx();
   newGame();
+}
+
+function updateHintBtn() {
+  const btn = document.getElementById('hint-btn');
+  const cnt = document.getElementById('hint-count');
+  if(!btn) return;
+  const cfg = DIFF_CONFIG[difficulty];
+  if(cfg.hints === 0) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = '';
+    if(cnt) cnt.textContent = `(${hintsLeft})`;
+    btn.disabled = (hintsLeft <= 0);
+    btn.style.opacity = (hintsLeft <= 0) ? '0.4' : '1';
+  }
 }
 
 function newGame(){
@@ -1098,12 +1244,25 @@ function newGame(){
   gameFinished=false; score=0; selected=null; hintPair=null;
   clearPathSVG(); setMessage(''); updateScore();
   document.getElementById('deadlock-overlay').classList.remove('show');
+  document.getElementById('win-overlay').classList.remove('show');
 
-  let pool=[];
-  TILE_DEFS.forEach((_,i)=>pool.push(i,i));
-  const maxTry=[0,50,40,30,20,15,10,7,4,2,1][difficulty];
-  let solved=false;
-  for(let t=0;t<maxTry;t++){
+  const cfg = DIFF_CONFIG[difficulty];
+  COLS = cfg.cols;
+  ROWS = cfg.rows;
+  hintsLeft = cfg.hints;
+  ACTIVE_TILES = TILE_DEFS.slice(0, cfg.tileTypes);
+
+  updateHintBtn();
+
+  const redealBtn = document.getElementById('redeal-btn');
+  if(redealBtn) redealBtn.style.display = cfg.redeal ? '' : 'none';
+
+  let pool = [];
+  ACTIVE_TILES.forEach((_, i) => pool.push(i, i));
+
+  const maxTry = cfg.maxTry;
+  let solved = false;
+  for(let t = 0; t < maxTry; t++){
     shuffle(pool); grid=[]; let idx=0;
     for(let r=0;r<ROWS;r++){ grid[r]=[]; for(let c=0;c<COLS;c++) grid[r][c]=pool[idx++]; }
     if(findAnyPair()){ solved=true; break; }
@@ -1116,17 +1275,23 @@ function newGame(){
   renderBoardWithAnimation();
   startTime=Date.now();
   timerInterval=setInterval(updateTimer,1000);
-  updateTimer(); updateTileCount(); updateSideRank();
+  updateTimer(); updateTileCount();
+  loadSideRank(difficulty);
+}
+
+function redeal() {
+  document.getElementById('deadlock-overlay').classList.remove('show');
+  newGame();
 }
 
 function ensureFirstPair(){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     if(grid[r][c]===null) continue;
-    const da=TILE_DEFS[grid[r][c]];
+    const da=ACTIVE_TILES[grid[r][c]];
     for(let r2=r;r2<ROWS;r2++){ const c2s=(r2===r?c+1:0);
       for(let c2=c2s;c2<COLS;c2++){
         if(grid[r2][c2]===null) continue;
-        const db=TILE_DEFS[grid[r2][c2]];
+        const db=ACTIVE_TILES[grid[r2][c2]];
         if(da.cat===db.cat&&da.n===db.n&&c+1<COLS){ [grid[r][c+1],grid[r2][c2]]=[grid[r2][c2],grid[r][c+1]]; return; }
       }
     }
@@ -1136,7 +1301,7 @@ function ensureFirstPair(){
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.random()*i|0;[a[i],a[j]]=[a[j],a[i]];} }
 
 function renderBoardWithAnimation(){
-  calcTileSize(); // DOM確定後にサイズ計算
+  calcTileSize();
   const board=document.getElementById('board');
   board.innerHTML='';
   board.style.gridTemplateColumns=`repeat(${COLS},${TW}px)`;
@@ -1154,7 +1319,7 @@ function renderBoardWithAnimation(){
     wrap.style.opacity='0';
     if(grid[r][c]===null){ wrap.classList.add('removed'); }
     else {
-      const svg=makeTile(TILE_DEFS[grid[r][c]],TW,TH);
+      const svg=makeTile(ACTIVE_TILES[grid[r][c]],TW,TH);
       wrap.appendChild(svg);
       wrap.addEventListener('click',()=>onTileClick(r,c));
     }
@@ -1172,7 +1337,6 @@ function renderBoardWithAnimation(){
     }
     if(c%4===0) setTimeout(()=>playSE('deal'), colDelay);
   }
-  // パーティクル＆ファンファーレ
   setTimeout(()=>{ launchParticles(); playSE('win'); }, 350);
   const totalDelay=(COLS-1)*22+(ROWS-1)*6+500;
   setTimeout(()=>startBGM(), totalDelay);
@@ -1186,8 +1350,8 @@ function onTileClick(r,c){
   clearHint();
   if(!selected){ selected={r,c}; getWrap(r,c).classList.add('selected'); return; }
   if(selected.r===r&&selected.c===c){ getWrap(r,c).classList.remove('selected'); selected=null; return; }
-  const da=TILE_DEFS[grid[selected.r][selected.c]];
-  const db=TILE_DEFS[grid[r][c]];
+  const da=ACTIVE_TILES[grid[selected.r][selected.c]];
+  const db=ACTIVE_TILES[grid[r][c]];
   if(da.cat!==db.cat||da.n!==db.n){
     playSE('ng'); getWrap(selected.r,selected.c).classList.remove('selected');
     selected={r,c}; getWrap(r,c).classList.add('selected');
@@ -1238,14 +1402,17 @@ function clearPathSVG(){ document.getElementById('path-svg').innerHTML=''; }
 function findAnyPair(){
   const tiles=[];
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]!==null) tiles.push({r,c,t:grid[r][c]});
-  for(let i=0;i<tiles.length;i++){ const da=TILE_DEFS[tiles[i].t]; for(let j=i+1;j<tiles.length;j++){ const db=TILE_DEFS[tiles[j].t]; if(da.cat===db.cat&&da.n===db.n){ const p=findPath(tiles[i].r,tiles[i].c,tiles[j].r,tiles[j].c); if(p) return{a:tiles[i],b:tiles[j],path:p}; } } }
+  for(let i=0;i<tiles.length;i++){ const da=ACTIVE_TILES[tiles[i].t]; for(let j=i+1;j<tiles.length;j++){ const db=ACTIVE_TILES[tiles[j].t]; if(da.cat===db.cat&&da.n===db.n){ const p=findPath(tiles[i].r,tiles[i].c,tiles[j].r,tiles[j].c); if(p) return{a:tiles[i],b:tiles[j],path:p}; } } }
   return null;
 }
 
 function doHint(){
   clearHint(); if(gameFinished) return;
+  if(hintsLeft <= 0){ setMessage('ヒントがありません'); setTimeout(()=>setMessage(''),1200); return; }
   const p=findAnyPair();
   if(!p){ setMessage('詰まっています'); return; }
+  hintsLeft--;
+  updateHintBtn();
   hintPair=p;
   const wa=getWrap(p.a.r,p.a.c), wb=getWrap(p.b.r,p.b.c);
   if(wa) wa.classList.add('hint-glow');
@@ -1259,7 +1426,7 @@ function clearHint(){ if(!hintPair) return; const wa=getWrap(hintPair.a.r,hintPa
 function showDeadlock(){
   let cnt=0;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]!==null) cnt++;
-  document.getElementById('deadlock-stats').textContent=`残り牌：${cnt}枚　スコア：${score}点`;
+  document.getElementById('deadlock-stats').textContent=`残り牌：${cnt}枚　スコア：${score}点　${DIFF_CONFIG[difficulty].label}`;
   const box=document.getElementById('deadlock-box');
   box.classList.remove('deadlock-shake');
   void box.offsetWidth;
@@ -1279,30 +1446,102 @@ const PRAISES=[
   ['🎉','見事なクリア！\nあなたはシーシェン名人です！'],
 ];
 
+let _winTimeSec = 0;
+
 function showWin(){
-  const elapsed=Math.floor((Date.now()-startTime)/1000);
-  bestTimes.push({time:elapsed,diff:difficulty});
+  _winTimeSec = Math.floor((Date.now()-startTime)/1000);
+  const diffLabel = DIFF_CONFIG[difficulty].label;
+
+  // ローカルランキング更新
+  bestTimes.push({time:_winTimeSec, diff:difficulty, difficulty:difficulty});
   bestTimes.sort((a,b)=>a.time-b.time);
   if(bestTimes.length>5) bestTimes=bestTimes.slice(0,5);
   localStorage.setItem('shisen_best5',JSON.stringify(bestTimes));
-  const rank=bestTimes.findIndex(r=>r.time===elapsed&&r.diff===difficulty);
+  const rank=bestTimes.findIndex(r=>r.time===_winTimeSec&&(r.difficulty||r.diff)===difficulty);
+
   const praise=PRAISES[Math.floor(Math.random()*PRAISES.length)];
   document.getElementById('win-emoji').textContent=praise[0];
   document.getElementById('win-praise').textContent=praise[1];
-  document.getElementById('win-stats').textContent=`タイム：${fmtTime(elapsed)}　スコア：${score}点　難易度：Lv${difficulty}`;
+  document.getElementById('win-stats').textContent=`タイム：${fmtTime(_winTimeSec)}　スコア：${score}点　${diffLabel}`;
+
+  // ローカルランキング表示
   const medals=['🥇','🥈','🥉','4位','5位'];
   const ul=document.getElementById('ranking-list'); ul.innerHTML='';
   bestTimes.forEach((rec,i)=>{
     const li=document.createElement('li');
-    const isNew=(rec.time===elapsed&&rec.diff===difficulty&&i===rank);
+    const isNew=(rec.time===_winTimeSec&&(rec.difficulty||rec.diff)===difficulty&&i===rank);
     if(isNew) li.classList.add('new-record');
-    li.innerHTML=`<span class="rank-medal">${medals[i]||''}</span><span class="rank-diff">Lv${rec.diff}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time)}</span>${isNew?'<span style="color:#f0d060;font-size:0.65rem">★NEW</span>':'<span></span>'}`;
+    li.innerHTML=`<span class="rank-medal">${medals[i]||''}</span><span class="rank-diff">${DIFF_CONFIG[rec.difficulty||rec.diff||'easy'].label}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time)}</span>${isNew?'<span style="color:#f0d060;font-size:0.65rem">★NEW</span>':'<span></span>'}`;
     ul.appendChild(li);
   });
+
+  // ニックネーム欄リセット
+  const nickIn  = document.getElementById('nick-input');
+  const nickSt  = document.getElementById('nick-status');
+  const saveBtn = document.getElementById('nick-save-btn');
+  const nickSec = document.getElementById('nick-section');
+  if(nickIn)  nickIn.value = localStorage.getItem('shisen_nickname') || '';
+  if(nickSt)  nickSt.textContent = '';
+  if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '登録'; }
+  if(nickSec) nickSec.style.display = sbOnline ? '' : 'none';
+
+  // グローバルランキング表示
+  loadGlobalRankWin(difficulty);
+
   document.getElementById('win-overlay').classList.add('show');
   launchParticles();
-  updateSideRank();
+  loadSideRank(difficulty);
 }
+
+async function loadGlobalRankWin(diff) {
+  const ul = document.getElementById('global-ranking-list');
+  if(!ul) return;
+  if(!sbOnline) { ul.innerHTML = '<li style="color:#887040">オフライン</li>'; return; }
+  ul.innerHTML = '<li style="color:#887040;font-size:0.65rem">読み込み中…</li>';
+  const rows = await fetchGlobalRank(diff);
+  ul.innerHTML = '';
+  if(!rows || rows.length === 0) {
+    ul.innerHTML = '<li style="color:#887040">まだ記録がありません</li>'; return;
+  }
+  const medals = ['🥇','🥈','🥉','4位','5位'];
+  rows.forEach((rec, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="rank-medal">${medals[i]||''}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(rec.player_name)}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time_seconds)}</span>`;
+    ul.appendChild(li);
+  });
+}
+
+async function saveScore() {
+  const nickIn  = document.getElementById('nick-input');
+  const nickSt  = document.getElementById('nick-status');
+  const saveBtn = document.getElementById('nick-save-btn');
+  const name    = (nickIn ? nickIn.value.trim() : '').slice(0, 20);
+
+  if(!name) { if(nickSt) nickSt.textContent = 'ニックネームを入力してください'; return; }
+  if(!sbOnline) { if(nickSt) nickSt.textContent = 'オフライン：登録できません'; return; }
+
+  if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '送信中…'; }
+  if(nickSt)  nickSt.textContent = '';
+
+  localStorage.setItem('shisen_nickname', name);
+
+  const result = await insertScore(name, _winTimeSec, difficulty, score);
+
+  if(!result) {
+    if(nickSt)  nickSt.textContent = '通信エラー。後でお試しください。';
+    if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '登録'; }
+    return;
+  }
+
+  const pos = await getGlobalPosition(_winTimeSec, difficulty);
+  const posStr = pos ? `世界 ${pos} 位！` : '登録完了！';
+  if(nickSt)  nickSt.textContent = `✓ ${posStr}`;
+  if(saveBtn) { saveBtn.textContent = '登録済み'; }
+
+  loadGlobalRankWin(difficulty);
+  loadSideRank(difficulty);
+}
+
 function closeWin(){ document.getElementById('win-overlay').classList.remove('show'); }
 
 function setMessage(m){ document.getElementById('message').textContent=m; }
@@ -1327,7 +1566,7 @@ function renderBoardQuiet(){
     wrap.className='tile-wrap'; wrap.dataset.r=r; wrap.dataset.c=c;
     if(grid[r][c]===null){ wrap.classList.add('removed'); }
     else {
-      wrap.appendChild(makeTile(TILE_DEFS[grid[r][c]],TW,TH));
+      wrap.appendChild(makeTile(ACTIVE_TILES[grid[r][c]],TW,TH));
       wrap.addEventListener('click',()=>onTileClick(r,c));
     }
     board.appendChild(wrap);
@@ -1342,8 +1581,10 @@ window.addEventListener('resize', ()=>{
     if(grid.length>0) renderBoardQuiet();
   }, 150);
 });
-updateSideRank();
-// スタート画面表示
+
+// 初期化
+setDiff('easy');
+loadSideRank('easy');
 </script>
 </body>
 </html>
