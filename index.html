@@ -496,7 +496,7 @@ h1 {
     <div class="win-praise" style="color:#cc9966">残念！これ以上消せる牌がありません。<br>気を取り直してもう一度！</div>
     <div class="win-stats" id="deadlock-stats" style="margin-top:8px"></div>
     <div class="win-btns" style="margin-top:16px">
-      <button class="btn" id="redeal-btn" onclick="redeal()" style="display:none">再配布</button>
+      <button class="btn" id="redeal-btn" onclick="reshuffleRemaining()" style="display:none">牌を再配置</button>
       <button class="btn" onclick="newGame(); document.getElementById('deadlock-overlay').classList.remove('show')">新規ゲーム</button>
     </div>
   </div>
@@ -585,9 +585,9 @@ function _esc(str) {
 // DIFFICULTY CONFIG
 // ═══════════════════════════════════════════
 const DIFF_CONFIG = {
-  easy:   { cols:12, rows:6, tileTypes:36, hints:5, redeal:true,  label:'初級', maxTry:40 },
-  normal: { cols:16, rows:8, tileTypes:64, hints:3, redeal:false, label:'中級', maxTry:20 },
-  hard:   { cols:18, rows:8, tileTypes:72, hints:0, redeal:false, label:'上級', maxTry:10 },
+  easy:   { cols:12, rows:6, tileTypes:36, hints:5, redeal:true,  label:'初級', maxTry:200, checkSolvable:true  },
+  normal: { cols:16, rows:8, tileTypes:64, hints:3, redeal:false, label:'中級', maxTry:20,  checkSolvable:false },
+  hard:   { cols:18, rows:8, tileTypes:72, hints:0, redeal:false, label:'上級', maxTry:10,  checkSolvable:false },
 };
 
 let difficulty = 'easy';
@@ -1239,6 +1239,34 @@ function updateHintBtn() {
   }
 }
 
+// グリッドのコピーでシミュレーションし、全牌を消せるか検証
+function checkBoardSolvable(){
+  const savedGrid = grid;
+  grid = grid.map(r => [...r]);
+  let progress = true;
+  while(progress){
+    progress = false;
+    // 残り牌をランダム順でスキャン
+    const tiles = [];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]!==null) tiles.push({r,c,t:grid[r][c]});
+    shuffle(tiles);
+    outer:
+    for(let i=0;i<tiles.length;i++){
+      const da=ACTIVE_TILES[tiles[i].t];
+      for(let j=i+1;j<tiles.length;j++){
+        const db=ACTIVE_TILES[tiles[j].t];
+        if(da.cat===db.cat&&da.n===db.n){
+          const path=findPath(tiles[i].r,tiles[i].c,tiles[j].r,tiles[j].c);
+          if(path){ grid[tiles[i].r][tiles[i].c]=null; grid[tiles[j].r][tiles[j].c]=null; progress=true; break outer; }
+        }
+      }
+    }
+  }
+  const solved=checkWin();
+  grid=savedGrid;
+  return solved;
+}
+
 function newGame(){
   clearInterval(timerInterval); stopBGM();
   gameFinished=false; score=0; selected=null; hintPair=null;
@@ -1261,11 +1289,13 @@ function newGame(){
   ACTIVE_TILES.forEach((_, i) => pool.push(i, i));
 
   const maxTry = cfg.maxTry;
+  const useDeepCheck = cfg.checkSolvable;
   let solved = false;
   for(let t = 0; t < maxTry; t++){
     shuffle(pool); grid=[]; let idx=0;
     for(let r=0;r<ROWS;r++){ grid[r]=[]; for(let c=0;c<COLS;c++) grid[r][c]=pool[idx++]; }
-    if(findAnyPair()){ solved=true; break; }
+    const ok = useDeepCheck ? checkBoardSolvable() : findAnyPair();
+    if(ok){ solved=true; break; }
   }
   if(!solved){
     shuffle(pool); grid=[]; let idx=0;
@@ -1282,6 +1312,23 @@ function newGame(){
 function redeal() {
   document.getElementById('deadlock-overlay').classList.remove('show');
   newGame();
+}
+
+// 手詰まり時、残り牌をその場でシャッフルして続行（初級専用）
+function reshuffleRemaining(){
+  document.getElementById('deadlock-overlay').classList.remove('show');
+  const positions=[], tiles=[];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c]!==null){ positions.push({r,c}); tiles.push(grid[r][c]); }
+  let ok=false;
+  for(let t=0;t<100;t++){
+    shuffle(tiles);
+    positions.forEach((p,i)=>{ grid[p.r][p.c]=tiles[i]; });
+    if(checkBoardSolvable()){ ok=true; break; }
+  }
+  if(!ok){ newGame(); return; }
+  gameFinished=false; selected=null; hintPair=null;
+  clearPathSVG(); setMessage('牌を再配置しました'); setTimeout(()=>setMessage(''),1500);
+  renderBoardQuiet();
 }
 
 function ensureFirstPair(){
