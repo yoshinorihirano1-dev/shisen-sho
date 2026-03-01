@@ -395,7 +395,7 @@ h1 {
     <div style="margin-bottom:8px;font-size:0.65rem;color:#a09050;letter-spacing:0.15em">難　易　度</div>
     <div class="start-diff-btns">
       <button class="start-diff-btn active" id="sd-easy" onclick="setDiffStart('easy')">
-        初　級<span>12×6・ヒント5回</span>
+        初　級<span>12×6・18種・ヒント5回</span>
       </button>
       <button class="start-diff-btn" id="sd-normal" onclick="setDiffStart('normal')">
         中　級<span>16×8・ヒント3回</span>
@@ -585,9 +585,9 @@ function _esc(str) {
 // DIFFICULTY CONFIG
 // ═══════════════════════════════════════════
 const DIFF_CONFIG = {
-  easy:   { cols:12, rows:6, tileTypes:36, hints:5, redeal:true,  label:'初級', maxTry:200, checkSolvable:true  },
-  normal: { cols:16, rows:8, tileTypes:64, hints:3, redeal:false, label:'中級', maxTry:20,  checkSolvable:false },
-  hard:   { cols:18, rows:8, tileTypes:72, hints:0, redeal:false, label:'上級', maxTry:10,  checkSolvable:false },
+  easy:   { cols:12, rows:6, tileTypes:18, copies:4, hints:5, redeal:true,  label:'初級', maxTry:200, checkSolvable:true  },
+  normal: { cols:16, rows:8, tileTypes:64, copies:2, hints:3, redeal:false, label:'中級', maxTry:20,  checkSolvable:false },
+  hard:   { cols:18, rows:8, tileTypes:72, copies:2, hints:0, redeal:false, label:'上級', maxTry:10,  checkSolvable:false },
 };
 
 let difficulty = 'easy';
@@ -1286,7 +1286,8 @@ function newGame(){
   if(redealBtn) redealBtn.style.display = cfg.redeal ? '' : 'none';
 
   let pool = [];
-  ACTIVE_TILES.forEach((_, i) => pool.push(i, i));
+  const copies = cfg.copies || 2;
+  ACTIVE_TILES.forEach((_, i) => { for(let k=0;k<copies;k++) pool.push(i); });
 
   const maxTry = cfg.maxTry;
   const useDeepCheck = cfg.checkSolvable;
@@ -1414,7 +1415,7 @@ function onTileClick(r,c){
     animateRemove(a.r,a.c); animateRemove(b.r,b.c);
     setTimeout(()=>{
       clearPathSVG();
-      if(checkWin()){ gameFinished=true; clearInterval(timerInterval); stopBGM(); playSE('win'); setTimeout(showWin,400); }
+      if(checkWin()){ gameFinished=true; clearInterval(timerInterval); stopBGM(); try{playSE('win');}catch(e){} setTimeout(showWin,400); }
       else if(!findAnyPair()){ gameFinished=true; clearInterval(timerInterval); stopBGM(); showDeadlock(); }
     },320);
   } else {
