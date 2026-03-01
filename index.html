@@ -2,7 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>二角取り</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -372,6 +375,15 @@ h1 {
   -webkit-tap-highlight-color: transparent;
 }
 .music-mini-btn.active { background: #5a20a0; border-color: #d090ff; color: #fff; }
+
+/* ── 全画面ボタン ── */
+.btn.fs-btn { background: linear-gradient(160deg, #1a2a3a, #2a5070, #1a2a3a); border-color: #4a80a0; font-size: clamp(0.7rem, 1.8vw, 0.85rem); padding: 5px 8px; }
+.btn.fs-btn.fs-active { background: linear-gradient(160deg, #0a1a2a, #1a3050, #0a1a2a); border-color: #2a6080; }
+
+/* iOS セーフエリア対応 (ノッチ/ダイナミックアイランド等) */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: max(2px, env(safe-area-inset-bottom)); padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); }
+}
 </style>
 </head>
 <body>
@@ -434,6 +446,7 @@ h1 {
   <button class="btn hint-btn" id="hint-btn" onclick="doHint()">ヒント <span id="hint-count"></span></button>
   <button class="btn" onclick="newGame()">新規</button>
   <button class="btn bgm-btn" id="bgm-btn" onclick="toggleBGM()">♪ ON</button>
+  <button class="btn fs-btn" id="fullscreen-btn" onclick="toggleFullscreen()" title="全画面表示">⛶</button>
 </div>
 
 <div style="display:flex;gap:8px;align-items:flex-start;justify-content:center;width:100%;max-width:900px;flex-wrap:wrap;">
@@ -1523,7 +1536,7 @@ function showWin(){
     ul.appendChild(li);
   });
 
-  // ニックネーム欄リセット
+  // ニックネーム欄リセット（最初は非表示）
   const nickIn  = document.getElementById('nick-input');
   const nickSt  = document.getElementById('nick-status');
   const saveBtn = document.getElementById('nick-save-btn');
@@ -1531,21 +1544,20 @@ function showWin(){
   if(nickIn)  nickIn.value = localStorage.getItem('shisen_nickname') || '';
   if(nickSt)  nickSt.textContent = '';
   if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '登録'; }
-  if(nickSec) nickSec.style.display = sbOnline ? '' : 'none';
-
-  // グローバルランキング表示
-  loadGlobalRankWin(difficulty);
+  if(nickSec) nickSec.style.display = 'none';
 
   document.getElementById('win-overlay').classList.add('show');
   launchParticles();
   loadSideRank(difficulty);
+
+  // グローバルランキングを取得してランクイン判定
+  checkGlobalRankEntry();
 }
 
 async function loadGlobalRankWin(diff) {
   const ul = document.getElementById('global-ranking-list');
   if(!ul) return;
   if(!sbOnline) { ul.innerHTML = '<li style="color:#887040">オフライン</li>'; return; }
-  ul.innerHTML = '<li style="color:#887040;font-size:0.65rem">読み込み中…</li>';
   const rows = await fetchGlobalRank(diff);
   ul.innerHTML = '';
   if(!rows || rows.length === 0) {
@@ -1557,6 +1569,46 @@ async function loadGlobalRankWin(diff) {
     li.innerHTML = `<span class="rank-medal">${medals[i]||''}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(rec.player_name)}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time_seconds)}</span>`;
     ul.appendChild(li);
   });
+}
+
+async function checkGlobalRankEntry() {
+  const nickSec  = document.getElementById('nick-section');
+  const nickSt   = document.getElementById('nick-status');
+  const globalUl = document.getElementById('global-ranking-list');
+
+  if(!sbOnline) {
+    if(globalUl) globalUl.innerHTML = '<li style="color:#887040">オフライン</li>';
+    return;
+  }
+
+  if(globalUl) globalUl.innerHTML = '<li style="color:#887040;font-size:0.65rem">確認中…</li>';
+  const rows = await fetchGlobalRank(difficulty);
+
+  // グローバルランキング表示
+  if(globalUl) {
+    globalUl.innerHTML = '';
+    const medals = ['🥇','🥈','🥉','4位','5位'];
+    if(rows && rows.length > 0) {
+      rows.forEach((rec, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="rank-medal">${medals[i]||''}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(rec.player_name)}</span><span style="font-variant-numeric:tabular-nums">${fmtTime(rec.time_seconds)}</span>`;
+        globalUl.appendChild(li);
+      });
+    } else {
+      globalUl.innerHTML = '<li style="color:#887040">まだ記録がありません</li>';
+    }
+  }
+
+  // ランクイン判定: 自分より速いプレイヤーが5人未満 → Top5入り
+  const fasterCount = rows ? rows.filter(r => r.time_seconds < _winTimeSec).length : 0;
+  const totalCount  = rows ? rows.length : 0;
+  const isInTop5    = totalCount < 5 || fasterCount < 5;
+
+  if(isInTop5) {
+    const rankPos = fasterCount + 1;
+    if(nickSec) nickSec.style.display = '';
+    if(nickSt)  nickSt.textContent = `🏆 世界 ${rankPos} 位にランクイン！名前を登録してください`;
+  }
 }
 
 async function saveScore() {
@@ -1629,6 +1681,34 @@ window.addEventListener('resize', ()=>{
     if(grid.length>0) renderBoardQuiet();
   }, 150);
 });
+
+// ── 全画面 ──
+function toggleFullscreen() {
+  const el  = document.documentElement;
+  const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(!isFS) {
+    if(el.requestFullscreen)            { el.requestFullscreen(); }
+    else if(el.webkitRequestFullscreen) { el.webkitRequestFullscreen(); }
+    else {
+      // iOS Safari: Fullscreen API 非対応 → ホーム画面追加を案内
+      setMessage('ホーム画面に追加すると全画面で遊べます（共有→ホーム画面に追加）');
+      setTimeout(()=>setMessage(''), 4000);
+    }
+  } else {
+    if(document.exitFullscreen)            { document.exitFullscreen(); }
+    else if(document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+  }
+}
+
+function _updateFsBtn() {
+  const btn  = document.getElementById('fullscreen-btn');
+  if(!btn) return;
+  const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  btn.textContent = isFS ? '⛶ 解除' : '⛶';
+  btn.classList.toggle('fs-active', isFS);
+}
+document.addEventListener('fullscreenchange',       _updateFsBtn);
+document.addEventListener('webkitfullscreenchange', _updateFsBtn);
 
 // 初期化
 setDiff('easy');
