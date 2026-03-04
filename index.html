@@ -406,6 +406,11 @@ h1 {
       <button class="music-btn active" id="ms0" onclick="selectMusic(0)">🎵 春の宴</button>
       <button class="music-btn" id="ms1" onclick="selectMusic(1)">🎵 月夜の竹林</button>
       <button class="music-btn" id="ms2" onclick="selectMusic(2)">🎵 龍の舞</button>
+      <button class="music-btn" id="ms3" onclick="selectMusic(3)">🎵 古琴の調べ</button>
+      <button class="music-btn" id="ms4" onclick="selectMusic(4)">🎵 江南春暁</button>
+      <button class="music-btn" id="ms5" onclick="selectMusic(5)">🎵 霧雨の廟</button>
+      <button class="music-btn" id="ms6" onclick="selectMusic(6)">🎵 茶館の午後</button>
+      <button class="music-btn" id="ms7" onclick="selectMusic(7)">🎵 蓮池の夜</button>
     </div>
     <div style="margin-bottom:8px;font-size:0.65rem;color:#a09050;letter-spacing:0.15em">難　易　度</div>
     <div class="start-diff-btns">
@@ -444,6 +449,11 @@ h1 {
     <button class="music-mini-btn active" id="mm0" onclick="selectMusicInGame(0)">春</button>
     <button class="music-mini-btn" id="mm1" onclick="selectMusicInGame(1)">月</button>
     <button class="music-mini-btn" id="mm2" onclick="selectMusicInGame(2)">龍</button>
+    <button class="music-mini-btn" id="mm3" onclick="selectMusicInGame(3)">琴</button>
+    <button class="music-mini-btn" id="mm4" onclick="selectMusicInGame(4)">江南</button>
+    <button class="music-mini-btn" id="mm5" onclick="selectMusicInGame(5)">霧</button>
+    <button class="music-mini-btn" id="mm6" onclick="selectMusicInGame(6)">茶</button>
+    <button class="music-mini-btn" id="mm7" onclick="selectMusicInGame(7)">蓮</button>
   </div>
   <div class="divider"></div>
   <button class="btn hint-btn" id="hint-btn" onclick="doHint()">ヒント <span id="hint-count"></span></button>
@@ -1013,26 +1023,80 @@ let audioCtx=null, bgmNodes=[], bgmOn=true, bgmLoopTimer=null, currentMusic=0;
 
 function getCtx(){
   if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
 }
 
+// iOS対応: ユーザー操作でAudioContextをアンロック
+function _unlockAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended'){
+    audioCtx.resume().then(()=>{ if(bgmOn && !bgmLoopTimer) startBGM(); });
+  }
+}
+['touchstart','touchend','mousedown','keydown'].forEach(ev=>{
+  document.addEventListener(ev, _unlockAudio, {once:false, passive:true});
+});
+
+// バックグラウンドから復帰時に音楽を再開
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && audioCtx && bgmOn){
+    audioCtx.resume().then(()=>{ if(!bgmLoopTimer) startBGM(); });
+  }
+});
+// iOS Safari: pageshow (ページキャッシュから復帰)
+window.addEventListener('pageshow',()=>{
+  if(audioCtx && bgmOn){
+    audioCtx.resume().then(()=>{ if(!bgmLoopTimer) startBGM(); });
+  }
+});
+
 const BGM_TRACKS=[
+  // 0: 春の宴
   [[523,.18],[659,.12],[784,.18],[880,.14],[784,.12],[659,.22],[523,.18],
    [587,.14],[659,.18],[784,.14],[880,.20],[784,.14],[659,.14],[523,.28],
    [440,.16],[523,.12],[659,.18],[784,.12],[659,.10],[523,.16],[440,.24],[392,.30],
    [523,.12],[587,.10],[659,.16],[784,.12],[880,.16],[1047,.20],[880,.14],[784,.14],[659,.28]],
+  // 1: 月夜の竹林
   [[523,.35],[0,.1],[659,.28],[0,.08],[784,.40],[0,.12],
    [880,.28],[784,.18],[659,.32],[0,.1],[523,.45],[0,.15],
    [440,.30],[0,.08],[523,.25],[587,.18],[659,.38],[0,.12],
    [784,.28],[659,.18],[587,.20],[523,.50],[0,.2],
    [392,.28],[440,.18],[523,.30],[0,.1],[659,.35],[784,.28],[659,.18],[523,.50]],
+  // 2: 龍の舞
   [[523,.10],[523,.08],[659,.12],[784,.10],[880,.14],[784,.10],[659,.08],[523,.18],
    [392,.10],[440,.10],[523,.12],[659,.10],[784,.12],[880,.10],[1047,.16],[880,.10],[784,.10],
    [659,.10],[784,.10],[880,.12],[784,.10],[659,.10],[587,.08],[523,.16],
    [392,.12],[440,.10],[523,.12],[659,.10],[784,.12],[880,.10],[1047,.20],[880,.12],[784,.12],[659,.22]],
+  // 3: 古琴の調べ (ゆったり・瞑想的)
+  [[523,.60],[0,.25],[659,.50],[0,.20],[784,.60],[0,.15],[659,.40],[523,.55],[0,.30],
+   [440,.50],[0,.20],[523,.40],[0,.15],[659,.50],[784,.45],[0,.25],
+   [880,.60],[0,.20],[784,.40],[659,.38],[523,.55],[0,.35],
+   [392,.45],[440,.38],[523,.52],[659,.42],[784,.38],[659,.32],[523,.68]],
+  // 4: 江南春暁 (流れるような・ゆっくり)
+  [[659,.28],[784,.22],[880,.32],[784,.22],[659,.28],[523,.35],[0,.15],
+   [587,.22],[659,.28],[784,.22],[880,.32],[0,.12],[784,.22],[659,.28],[587,.22],[523,.38],[0,.18],
+   [440,.28],[523,.22],[659,.32],[784,.28],[659,.22],[587,.28],[523,.35],[0,.12],
+   [784,.22],[880,.28],[1047,.38],[880,.22],[784,.28],[659,.22],[523,.45]],
+  // 5: 霧雨の廟 (非常にゆったり・幻想的)
+  [[523,.72],[0,.32],[659,.62],[0,.22],[523,.52],[0,.42],
+   [440,.62],[0,.28],[523,.52],[659,.42],[0,.32],
+   [784,.72],[0,.28],[659,.58],[523,.48],[0,.38],
+   [392,.52],[440,.42],[523,.62],[0,.32],[659,.52],[784,.42],[523,.82]],
+  // 6: 茶館の午後 (のんびり・ほのぼの)
+  [[523,.32],[659,.26],[784,.32],[659,.22],[523,.28],[0,.18],
+   [440,.26],[523,.32],[659,.28],[784,.32],[0,.12],[880,.28],[784,.22],[659,.32],[523,.38],[0,.22],
+   [587,.28],[659,.22],[784,.28],[659,.22],[587,.28],[523,.32],[0,.18],
+   [392,.32],[440,.28],[523,.38],[659,.32],[784,.28],[659,.22],[523,.42],[440,.38],[392,.45]],
+  // 7: 蓮池の夜 (夜想的・ゆっくり)
+  [[784,.42],[0,.22],[880,.38],[784,.28],[659,.42],[0,.18],
+   [523,.38],[587,.28],[659,.42],[784,.38],[0,.22],
+   [880,.48],[0,.18],[1047,.42],[880,.32],[784,.42],[659,.38],[0,.28],
+   [523,.42],[440,.38],[523,.32],[659,.42],[784,.38],[659,.32],[523,.52],[0,.32],
+   [392,.38],[440,.32],[523,.48],[659,.38],[784,.42],[523,.62]],
 ];
 const BGM_VOL=0.055;
+// 波形: 0=triangle,1=triangle,2=sawtooth,3=triangle,4=triangle,5=sine,6=triangle,7=triangle
+const BGM_WAVE=['triangle','triangle','sawtooth','triangle','triangle','sine','triangle','triangle'];
 
 function startBGM(){
   stopBGM();
@@ -1042,13 +1106,18 @@ function startBGM(){
 function _playBGMLoop(){
   if(!bgmOn) return;
   const ctx=getCtx();
+  // AudioContextがsuspendedの場合はresumeを待ってから再試行
+  if(ctx.state==='suspended'){
+    ctx.resume().then(()=>{ if(bgmOn) _playBGMLoop(); });
+    return;
+  }
   const seq=BGM_TRACKS[currentMusic];
   let t=ctx.currentTime+0.05, totalLen=0;
   bgmNodes=[];
   seq.forEach(([freq,dur])=>{
     if(freq>0){
       const osc=ctx.createOscillator(), g=ctx.createGain();
-      osc.type=(currentMusic===2)?'sawtooth':'triangle';
+      osc.type=BGM_WAVE[currentMusic]||'triangle';
       osc.frequency.value=freq;
       g.gain.setValueAtTime(0,t);
       g.gain.linearRampToValueAtTime(BGM_VOL,t+0.025);
@@ -1075,7 +1144,7 @@ function toggleBGM(){
 }
 function selectMusic(i){
   currentMusic=i;
-  [0,1,2].forEach(j=>{
+  [0,1,2,3,4,5,6,7].forEach(j=>{
     const s=document.getElementById('ms'+j); if(s) s.classList.toggle('active',j===i);
     const m=document.getElementById('mm'+j); if(m) m.classList.toggle('active',j===i);
   });
