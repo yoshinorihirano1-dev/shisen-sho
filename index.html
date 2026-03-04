@@ -85,6 +85,9 @@ h1 {
 .btn.hint-btn { background: linear-gradient(160deg, #5a1a00, #b04010, #5a1a00); border-color: #e06020; }
 .btn.bgm-btn { background: linear-gradient(160deg, #1a3a5a, #2a6aaa, #1a3a5a); border-color: #4a8acc; }
 .btn.bgm-btn.muted { background: linear-gradient(160deg, #2a2a2a, #555, #2a2a2a); border-color: #666; color: #aaa; }
+.btn.auto-btn { background: linear-gradient(160deg, #1a3a1a, #2a6a2a, #1a3a1a); border-color: #4a9a4a; }
+.btn.auto-btn.auto-on { background: linear-gradient(160deg, #4a0000, #a01010, #4a0000); border-color: #dd2222; animation: auto-pulse 1s ease-in-out infinite alternate; }
+@keyframes auto-pulse { from { box-shadow: 0 2px 5px #0005; } to { box-shadow: 0 0 12px #dd222266; } }
 
 /* ── ボード ── */
 #board-outer {
@@ -444,6 +447,7 @@ h1 {
   </div>
   <div class="divider"></div>
   <button class="btn hint-btn" id="hint-btn" onclick="doHint()">ヒント <span id="hint-count"></span></button>
+  <button class="btn auto-btn" id="auto-btn" onclick="startAuto()">🤖 AUTO</button>
   <button class="btn" onclick="newGame()">新規</button>
   <button class="btn bgm-btn" id="bgm-btn" onclick="toggleBGM()">♪ ON</button>
   <button class="btn fs-btn" id="fullscreen-btn" onclick="toggleFullscreen()" title="全画面表示">⛶</button>
@@ -1215,6 +1219,7 @@ function _renderSideRankLocal(ul, diff) {
 // ═══════════════════════════════════════════
 let grid=[], selected=null, score=0, hintPair=null;
 let startTime, timerInterval, gameFinished=false;
+let autoMode=false, autoRunning=false, autoTimer=null;
 
 function setDiff(d) {
   difficulty = d;
@@ -1280,6 +1285,10 @@ function checkBoardSolvable(){
 }
 
 function newGame(){
+  if(autoRunning) stopAuto();
+  autoMode=false; autoRunning=false; clearTimeout(autoTimer);
+  const autoBtn=document.getElementById('auto-btn');
+  if(autoBtn){ autoBtn.textContent='🤖 AUTO'; autoBtn.classList.remove('auto-on'); }
   clearInterval(timerInterval); stopBGM();
   gameFinished=false; score=0; selected=null; hintPair=null;
   clearPathSVG(); setMessage(''); updateScore();
@@ -1405,7 +1414,7 @@ function renderBoardWithAnimation(){
 function getWrap(r,c){ return document.querySelector(`.tile-wrap[data-r="${r}"][data-c="${c}"]`); }
 
 function onTileClick(r,c){
-  if(gameFinished) return;
+  if(gameFinished||autoRunning) return;
   if(grid[r][c]===null) return;
   clearHint();
   if(!selected){ selected={r,c}; getWrap(r,c).classList.add('selected'); return; }
@@ -1466,6 +1475,50 @@ function findAnyPair(){
   return null;
 }
 
+// ── AUTO MODE ──────────────────────────────────────────────────────────────
+function startAuto(){
+  if(gameFinished) return;
+  if(autoRunning){ stopAuto(); return; }
+  autoMode=true; autoRunning=true;
+  clearHint(); selected=null;
+  document.querySelectorAll('.tile-wrap.selected').forEach(w=>w.classList.remove('selected'));
+  const btn=document.getElementById('auto-btn');
+  if(btn){ btn.textContent='⏹ 停止'; btn.classList.add('auto-on'); }
+  setMessage('🤖 オートプレイ中… ランキング対象外');
+  autoStep();
+}
+function stopAuto(){
+  autoRunning=false; clearTimeout(autoTimer);
+  const btn=document.getElementById('auto-btn');
+  if(btn){ btn.textContent='🤖 AUTO'; btn.classList.remove('auto-on'); }
+  setMessage('オートプレイ停止'); setTimeout(()=>{ if(!gameFinished) setMessage(''); },1500);
+}
+function autoStep(){
+  if(!autoRunning||gameFinished) return;
+  clearHint();
+  const p=findAnyPair();
+  if(!p){ stopAuto(); if(!checkWin()){ gameFinished=true; clearInterval(timerInterval); stopBGM(); showDeadlock(); } return; }
+  const wa=getWrap(p.a.r,p.a.c), wb=getWrap(p.b.r,p.b.c);
+  if(wa) wa.classList.add('selected');
+  if(wb) wb.classList.add('selected');
+  drawPath(p.path);
+  autoTimer=setTimeout(()=>{
+    if(!autoRunning) return;
+    if(wa) wa.classList.remove('selected');
+    if(wb) wb.classList.remove('selected');
+    playSE('match');
+    grid[p.a.r][p.a.c]=null; grid[p.b.r][p.b.c]=null;
+    score+=10; updateScore(); updateTileCount();
+    animateRemove(p.a.r,p.a.c); animateRemove(p.b.r,p.b.c);
+    setTimeout(()=>{
+      clearPathSVG();
+      if(checkWin()){ gameFinished=true; autoRunning=false; clearInterval(timerInterval); stopBGM(); try{playSE('win');}catch(e){} setTimeout(showWin,400); }
+      else{ autoStep(); }
+    },320);
+  },450);
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 function doHint(){
   clearHint(); if(gameFinished) return;
   if(hintsLeft <= 0){ setMessage('ヒントがありません'); setTimeout(()=>setMessage(''),1200); return; }
@@ -1512,17 +1565,21 @@ function showWin(){
   _winTimeSec = Math.floor((Date.now()-startTime)/1000);
   const diffLabel = DIFF_CONFIG[difficulty].label;
 
-  // ローカルランキング更新
-  bestTimes.push({time:_winTimeSec, diff:difficulty, difficulty:difficulty});
-  bestTimes.sort((a,b)=>a.time-b.time);
-  if(bestTimes.length>5) bestTimes=bestTimes.slice(0,5);
-  localStorage.setItem('shisen_best5',JSON.stringify(bestTimes));
-  const rank=bestTimes.findIndex(r=>r.time===_winTimeSec&&(r.difficulty||r.diff)===difficulty);
+  // ローカルランキング更新（AUTO使用時は除外）
+  let rank=-1;
+  if(!autoMode){
+    bestTimes.push({time:_winTimeSec, diff:difficulty, difficulty:difficulty});
+    bestTimes.sort((a,b)=>a.time-b.time);
+    if(bestTimes.length>5) bestTimes=bestTimes.slice(0,5);
+    localStorage.setItem('shisen_best5',JSON.stringify(bestTimes));
+    rank=bestTimes.findIndex(r=>r.time===_winTimeSec&&(r.difficulty||r.diff)===difficulty);
+  }
 
   const praise=PRAISES[Math.floor(Math.random()*PRAISES.length)];
   document.getElementById('win-emoji').textContent=praise[0];
   document.getElementById('win-praise').textContent=praise[1];
-  document.getElementById('win-stats').textContent=`タイム：${fmtTime(_winTimeSec)}　スコア：${score}点　${diffLabel}`;
+  const autoTag=autoMode?'　🤖 AUTO（ランキング対象外）':'';
+  document.getElementById('win-stats').textContent=`タイム：${fmtTime(_winTimeSec)}　スコア：${score}点　${diffLabel}${autoTag}`;
 
   // ローカルランキング表示
   const medals=['🥇','🥈','🥉','4位','5位'];
@@ -1549,8 +1606,13 @@ function showWin(){
   launchParticles();
   loadSideRank(difficulty);
 
-  // グローバルランキングを取得してランクイン判定
-  checkGlobalRankEntry();
+  if(autoMode){
+    // AUTO使用時はグローバルランキング表示のみ（登録不可）
+    loadGlobalRankWin(difficulty);
+  } else {
+    // グローバルランキングを取得してランクイン判定
+    checkGlobalRankEntry();
+  }
 }
 
 async function loadGlobalRankWin(diff) {
