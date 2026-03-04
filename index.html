@@ -1013,9 +1013,32 @@ let audioCtx=null, bgmNodes=[], bgmOn=true, bgmLoopTimer=null, currentMusic=0;
 
 function getCtx(){
   if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
 }
+
+// iOS対応: ユーザー操作でAudioContextをアンロック
+function _unlockAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended'){
+    audioCtx.resume().then(()=>{ if(bgmOn && !bgmLoopTimer) startBGM(); });
+  }
+}
+['touchstart','touchend','mousedown','keydown'].forEach(ev=>{
+  document.addEventListener(ev, _unlockAudio, {once:false, passive:true});
+});
+
+// バックグラウンドから復帰時に音楽を再開
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && audioCtx && bgmOn){
+    audioCtx.resume().then(()=>{ if(!bgmLoopTimer) startBGM(); });
+  }
+});
+// iOS Safari: pageshow (ページキャッシュから復帰)
+window.addEventListener('pageshow',()=>{
+  if(audioCtx && bgmOn){
+    audioCtx.resume().then(()=>{ if(!bgmLoopTimer) startBGM(); });
+  }
+});
 
 const BGM_TRACKS=[
   [[523,.18],[659,.12],[784,.18],[880,.14],[784,.12],[659,.22],[523,.18],
@@ -1042,6 +1065,11 @@ function startBGM(){
 function _playBGMLoop(){
   if(!bgmOn) return;
   const ctx=getCtx();
+  // AudioContextがsuspendedの場合はresumeを待ってから再試行
+  if(ctx.state==='suspended'){
+    ctx.resume().then(()=>{ if(bgmOn) _playBGMLoop(); });
+    return;
+  }
   const seq=BGM_TRACKS[currentMusic];
   let t=ctx.currentTime+0.05, totalLen=0;
   bgmNodes=[];
