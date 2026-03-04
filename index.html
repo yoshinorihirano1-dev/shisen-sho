@@ -558,16 +558,15 @@ async function fetchGlobalRank(diff) {
 async function insertScore(playerName, timeSec, diff, scoreVal) {
   if(!sbOnline || !sbClient) return null;
   try {
-    const { data, error } = await withTimeout(
+    const { error } = await withTimeout(
       sbClient.from('shisen_rankings')
-        .insert([{ player_name: playerName, time_seconds: timeSec, difficulty: diff, score: scoreVal }])
-        .select(),
+        .insert([{ player_name: playerName, time_seconds: timeSec, difficulty: diff, score: scoreVal }]),
       8000
     );
     if(error) throw error;
-    return data;
+    return true;
   } catch(e) {
-    console.warn('insertScore error:', e);
+    console.warn('insertScore error:', e.message || e);
     return null;
   }
 }
